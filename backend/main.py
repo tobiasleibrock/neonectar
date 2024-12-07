@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.routers import chat, docs
+from fastapi.staticfiles import StaticFiles
+from backend.routers import chat, docs, avatar
 from backend.models.database import init_db
+import os
 
 app = FastAPI(
     title="AI Documentation Journey API",
@@ -18,9 +20,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount static files directory
+app.mount("/static", StaticFiles(directory="backend/static"), name="static")
+
 # Include routers
 app.include_router(chat.router)
 app.include_router(docs.router)
+app.include_router(avatar.router)
 
 
 @app.on_event("startup")
