@@ -1,29 +1,42 @@
-'use client';
+"use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { MessageCircle, User, Menu, Send, Link, Briefcase, CheckCircle2 } from "lucide-react";
+import {
+  MessageCircle,
+  User,
+  Menu,
+  Send,
+  Link,
+  Briefcase,
+  CheckCircle2,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { apiService } from "@/services/api";
 
 // Separate component for the chat interface
-function ChatInterface() {
-  const [messages, setMessages] = useState([
+function ChatInterface({ docUrl }: { docUrl: string }) {
+  const [messages, setMessages] = useState<
+    Array<{ role: string; content: string }>
+  >([
     {
       role: "ai",
-      content: "Welcome to the AI documentation journey! Let me guide you through the basics..."
-    }
+      content:
+        "Welcome to the AI documentation journey! Let me guide you through the basics...",
+    },
   ]);
   const [inputMessage, setInputMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(2);
 
   const tutorialSteps = [
@@ -34,20 +47,37 @@ function ChatInterface() {
     { step: 5, title: "Final Review", completed: false },
   ];
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputMessage.trim()) return;
+    if (!inputMessage.trim() || isLoading) return;
 
-    setMessages([...messages, { role: "user", content: inputMessage }]);
-    
-    setTimeout(() => {
-      setMessages(prev => [...prev, { 
-        role: "ai", 
-        content: "This is a simulated AI response to your message." 
-      }]);
-    }, 1000);
-
+    const userMessage = { role: "user", content: inputMessage };
+    setMessages((prev) => [...prev, userMessage]);
     setInputMessage("");
+    setIsLoading(true);
+
+    try {
+      const response = await apiService.sendChatMessage({
+        messages: [...messages, userMessage],
+        doc_url: docUrl,
+      });
+
+      setMessages((prev) => [
+        ...prev,
+        { role: "ai", content: response.response },
+      ]);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "ai",
+          content: "Sorry, I encountered an error processing your message.",
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -76,7 +106,9 @@ function ChatInterface() {
               <div className="flex justify-between items-center text-sm">
                 <span className="font-medium">Introduction to AI</span>
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <span>Step {currentStep} of {tutorialSteps.length}</span>
+                  <span>
+                    Step {currentStep} of {tutorialSteps.length}
+                  </span>
                   <div className="flex items-center text-xs text-muted-foreground/80">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -99,32 +131,39 @@ function ChatInterface() {
                 <Tooltip defaultOpen={false}>
                   <TooltipTrigger asChild>
                     <div className="w-full cursor-pointer group">
-                      <Progress 
-                        value={40} 
-                        className="w-full h-2.5 transition-all duration-200 group-hover:h-3" 
+                      <Progress
+                        value={40}
+                        className="w-full h-2.5 transition-all duration-200 group-hover:h-3"
                       />
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent 
-                    side="bottom" 
+                  <TooltipContent
+                    side="bottom"
                     align="center"
                     className="p-4 w-[300px] bg-background border rounded-lg shadow-lg animate-in fade-in-0 zoom-in-95 duration-200"
                   >
                     <div className="space-y-3">
                       {tutorialSteps.map((step, index) => (
-                        <div 
+                        <div
                           key={step.step}
                           className={`flex items-center gap-2 ${
-                            currentStep === step.step ? 'text-primary font-medium' : 
-                            step.completed ? 'text-muted-foreground' : 'text-muted-foreground/60'
+                            currentStep === step.step
+                              ? "text-primary font-medium"
+                              : step.completed
+                              ? "text-muted-foreground"
+                              : "text-muted-foreground/60"
                           }`}
                         >
                           {step.completed ? (
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
                           ) : (
-                            <div className={`h-4 w-4 rounded-full border ${
-                              currentStep === step.step ? 'border-primary bg-primary/20' : 'border-muted-foreground/60'
-                            }`} />
+                            <div
+                              className={`h-4 w-4 rounded-full border ${
+                                currentStep === step.step
+                                  ? "border-primary bg-primary/20"
+                                  : "border-muted-foreground/60"
+                              }`}
+                            />
                           )}
                           <span>{step.title}</span>
                         </div>
@@ -150,7 +189,11 @@ function ChatInterface() {
                     {messages.map((message, index) => (
                       <div
                         key={index}
-                        className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                        className={`flex ${
+                          message.role === "user"
+                            ? "justify-end"
+                            : "justify-start"
+                        }`}
                       >
                         <div
                           className={`max-w-[80%] rounded-lg p-3 ${
@@ -208,32 +251,41 @@ function ChatInterface() {
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
-  const [docLink, setDocLink] = useState('');
-  const [position, setPosition] = useState('');
+  const [docLink, setDocLink] = useState("");
+  const [position, setPosition] = useState("");
   const [showChat, setShowChat] = useState(false);
-  const [errors, setErrors] = useState({ docLink: '', position: '' });
-  const [loadingMessage, setLoadingMessage] = useState('');
+  const [errors, setErrors] = useState({ docLink: "", position: "" });
+  const [loadingMessage, setLoadingMessage] = useState("");
   const [progress, setProgress] = useState(0);
   const router = useRouter();
+  const [docUrl, setDocUrl] = useState("");
 
   const loadingSteps = [
-    { message: 'Analyzing documentation...', targetProgress: 25 },
-    { message: 'Creating personalized tutorial...', targetProgress: 50 },
-    { message: 'Generating video content...', targetProgress: 75 },
-    { message: 'Finalizing your experience...', targetProgress: 100 }
+    { message: "Analyzing documentation...", targetProgress: 25 },
+    { message: "Creating personalized tutorial...", targetProgress: 50 },
+    { message: "Generating video content...", targetProgress: 75 },
+    { message: "Finalizing your experience...", targetProgress: 100 },
+  ];
+
+  const tutorialSteps = [
+    { step: 1, title: "Introduction to AI", completed: true },
+    { step: 2, title: "Understanding Core Concepts", completed: false },
+    { step: 3, title: "Practical Applications", completed: false },
+    { step: 4, title: "Advanced Topics", completed: false },
+    { step: 5, title: "Final Review", completed: false },
   ];
 
   const validateInputs = () => {
-    const newErrors = { docLink: '', position: '' };
+    const newErrors = { docLink: "", position: "" };
     let isValid = true;
 
     if (!docLink.trim()) {
-      newErrors.docLink = 'Please provide a documentation link';
+      newErrors.docLink = "Please provide a documentation link";
       isValid = false;
     }
 
     if (!position.trim()) {
-      newErrors.position = 'Please specify your position';
+      newErrors.position = "Please specify your position";
       isValid = false;
     }
 
@@ -243,33 +295,54 @@ export default function Home() {
 
   const handleGenerate = async () => {
     if (!validateInputs()) return;
-    
+
     setIsLoading(true);
     setProgress(0);
     setLoadingMessage(loadingSteps[0].message);
 
+    try {
+      const response = await apiService.processDocumentation({
+        url: docLink,
+      });
+
+      if (response.success) {
+        setDocUrl(docLink);
+        simulateProgress(() => {
+          setIsLoading(false);
+          setShowChat(true);
+        });
+      }
+    } catch (error) {
+      console.error("Error processing documentation:", error);
+      setErrors((prev) => ({
+        ...prev,
+        docLink: "Error processing documentation. Please try again.",
+      }));
+      setIsLoading(false);
+    }
+  };
+
+  const simulateProgress = (onComplete: () => void) => {
     const startTime = Date.now();
-    const totalDuration = 5000; // 5 seconds total
+    const totalDuration = 5000;
     const stepDuration = totalDuration / loadingSteps.length;
 
     const animate = () => {
       const elapsed = Date.now() - startTime;
       const currentProgress = Math.min((elapsed / totalDuration) * 100, 100);
-      
-      // Update progress
+
       setProgress(Math.round(currentProgress));
-      
-      // Update message based on progress
-      const currentStep = Math.min(Math.floor(elapsed / stepDuration), loadingSteps.length - 1);
+
+      const currentStep = Math.min(
+        Math.floor(elapsed / stepDuration),
+        loadingSteps.length - 1
+      );
       setLoadingMessage(loadingSteps[currentStep].message);
 
       if (currentProgress < 100) {
         requestAnimationFrame(animate);
       } else {
-        setTimeout(() => {
-          setIsLoading(false);
-          setShowChat(true);
-        }, 100);
+        onComplete();
       }
     };
 
@@ -277,7 +350,7 @@ export default function Home() {
   };
 
   if (showChat) {
-    return <ChatInterface />;
+    return <ChatInterface docUrl={docUrl} />;
   }
 
   return (
@@ -300,8 +373,10 @@ export default function Home() {
 
       <main className="flex-1 flex items-center justify-center p-4">
         <Card className="w-full max-w-md p-6 space-y-6">
-          <h2 className="text-2xl font-bold text-center">Start Your AI Journey</h2>
-          
+          <h2 className="text-2xl font-bold text-center">
+            Start Your AI Journey
+          </h2>
+
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
@@ -313,9 +388,10 @@ export default function Home() {
                 value={docLink}
                 onChange={(e) => {
                   setDocLink(e.target.value);
-                  if (errors.docLink) setErrors(prev => ({ ...prev, docLink: '' }));
+                  if (errors.docLink)
+                    setErrors((prev) => ({ ...prev, docLink: "" }));
                 }}
-                className={errors.docLink ? 'border-red-500' : ''}
+                className={errors.docLink ? "border-red-500" : ""}
               />
               {errors.docLink && (
                 <p className="text-sm text-red-500">{errors.docLink}</p>
@@ -332,9 +408,10 @@ export default function Home() {
                 value={position}
                 onChange={(e) => {
                   setPosition(e.target.value);
-                  if (errors.position) setErrors(prev => ({ ...prev, position: '' }));
+                  if (errors.position)
+                    setErrors((prev) => ({ ...prev, position: "" }));
                 }}
-                className={errors.position ? 'border-red-500' : ''}
+                className={errors.position ? "border-red-500" : ""}
               />
               {errors.position && (
                 <p className="text-sm text-red-500">{errors.position}</p>
@@ -342,18 +419,20 @@ export default function Home() {
             </div>
 
             <div className="space-y-3">
-              <Button 
+              <Button
                 className="w-full transform transition-transform duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-lg"
                 onClick={handleGenerate}
                 disabled={isLoading}
               >
-                {isLoading ? loadingMessage : 'Create Tutorial'}
+                {isLoading ? loadingMessage : "Create Tutorial"}
               </Button>
-              
+
               {isLoading && (
                 <div className="space-y-2">
                   <Progress value={progress} className="w-full h-2" />
-                  <p className="text-sm text-center text-muted-foreground">{progress}% Complete</p>
+                  <p className="text-sm text-center text-muted-foreground">
+                    {progress}% Complete
+                  </p>
                 </div>
               )}
             </div>

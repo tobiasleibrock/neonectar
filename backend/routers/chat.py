@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 
 class Message(BaseModel):
-    role: str
+    role: str  # 'user' or 'assistant' or 'system'
     content: str
 
 
@@ -52,26 +52,29 @@ async def send_message(request: ChatRequest, db: AsyncSession = Depends(get_db))
                 detail=f"No documentation found for {root_url}. Please process the documentation first.",
             )
 
-        # Prepare the conversation context
-        messages = [
+        # Convert 'ai' role to 'assistant' for OpenAI API compatibility
+        openai_messages = []
+
+        # Add system message first
+        openai_messages.append(
             {
                 "role": "system",
                 "content": f"""You are a helpful AI assistant explaining documentation. 
-                Use this documentation context to answer questions: {doc_script.script_content}
-                
-                Keep responses conversational and easy to understand. Focus on the documentation content. Keep answers concise and to the point.""",
+            Use this documentation context to answer questions: {doc_script.script_content}
+            
+            Keep responses conversational and easy to understand. Focus on the documentation content. Keep answers concise and to the point.""",
             }
-        ]
-
-        # Add user messages
-        messages.extend(
-            [{"role": m.role, "content": m.content} for m in request.messages]
         )
+
+        # Add user messages, converting 'ai' to 'assistant' if present
+        for msg in request.messages:
+            role = "assistant" if msg.role == "ai" else msg.role
+            openai_messages.append({"role": role, "content": msg.content})
 
         # Generate response using OpenAI
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=messages,
+            messages=openai_messages,
             temperature=0.7,
             max_tokens=500,
         )
