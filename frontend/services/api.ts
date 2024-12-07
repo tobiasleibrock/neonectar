@@ -1,4 +1,5 @@
 import axios from "axios";
+import { mockApiService } from "./mock";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -36,26 +37,32 @@ export interface ChatResponse {
   audio_url: string | null;
 }
 
-export const apiService = {
-  async processDocumentation(
-    request: ProcessDocsRequest
-  ): Promise<ProcessDocsResponse> {
-    try {
-      const response = await api.post("/api/docs/process", request);
-      return response.data;
-    } catch (error) {
-      console.error("Error processing documentation:", error);
-      throw error;
-    }
-  },
+export const createApiService = (useMock: boolean) => {
+  if (useMock) {
+    return mockApiService;
+  }
 
-  async sendChatMessage(request: ChatRequest): Promise<ChatResponse> {
-    try {
-      const response = await api.post("/api/chat/send", request);
-      return response.data;
-    } catch (error) {
-      console.error("Error sending chat message:", error);
-      throw error;
-    }
-  },
+  return {
+    async processDocumentation(
+      request: ProcessDocsRequest
+    ): Promise<ProcessDocsResponse> {
+      try {
+        const response = await api.post("/api/docs/process", request);
+        return response.data;
+      } catch (error) {
+        console.error("Error processing documentation:", error);
+        throw error;
+      }
+    },
+
+    async sendChatMessage(request: ChatRequest): Promise<ChatResponse> {
+      try {
+        const response = await api.post("/api/chat/send", request);
+        return response.data;
+      } catch (error) {
+        console.error("Error sending chat message:", error);
+        throw error;
+      }
+    },
+  };
 };

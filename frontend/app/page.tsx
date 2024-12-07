@@ -22,7 +22,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { apiService } from "@/services/api";
+import { createApiService } from "@/services/api";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { useMock } from "@/context/mock-context";
 
 // Separate component for the chat interface
 function ChatInterface({ docUrl }: { docUrl: string }) {
@@ -38,6 +41,8 @@ function ChatInterface({ docUrl }: { docUrl: string }) {
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(2);
+  const { useMock: isMockEnabled } = useMock();
+  const api = createApiService(isMockEnabled);
 
   const tutorialSteps = [
     { step: 1, title: "Introduction to AI", completed: true },
@@ -57,7 +62,7 @@ function ChatInterface({ docUrl }: { docUrl: string }) {
     setIsLoading(true);
 
     try {
-      const response = await apiService.sendChatMessage({
+      const response = await api.sendChatMessage({
         messages: [...messages, userMessage],
         doc_url: docUrl,
       });
@@ -82,21 +87,7 @@ function ChatInterface({ docUrl }: { docUrl: string }) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Navigation Bar */}
-      <header className="border-b">
-        <nav className="max-w-6xl w-full mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Menu className="h-6 w-6" />
-              <h1 className="text-xl font-bold">AI Journey</h1>
-            </div>
-            <Avatar>
-              <AvatarImage src="https://github.com/shadcn.png" />
-              <AvatarFallback>CN</AvatarFallback>
-            </Avatar>
-          </div>
-        </nav>
-      </header>
+      <NavBar />
 
       <main className="flex-1 w-full">
         <div className="max-w-6xl w-full mx-auto px-4">
@@ -249,6 +240,37 @@ function ChatInterface({ docUrl }: { docUrl: string }) {
   );
 }
 
+function NavBar() {
+  const { useMock: isMockEnabled, toggleMock } = useMock();
+
+  return (
+    <header className="border-b">
+      <nav className="max-w-6xl w-full mx-auto px-4 py-4">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <Menu className="h-6 w-6" />
+            <h1 className="text-xl font-bold">AI Journey</h1>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="mock-mode"
+                checked={isMockEnabled}
+                onCheckedChange={toggleMock}
+              />
+              <Label htmlFor="mock-mode">Mock Mode</Label>
+            </div>
+            <Avatar>
+              <AvatarImage src="https://github.com/shadcn.png" />
+              <AvatarFallback>CN</AvatarFallback>
+            </Avatar>
+          </div>
+        </div>
+      </nav>
+    </header>
+  );
+}
+
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [docLink, setDocLink] = useState("");
@@ -259,6 +281,8 @@ export default function Home() {
   const [progress, setProgress] = useState(0);
   const router = useRouter();
   const [docUrl, setDocUrl] = useState("");
+  const { useMock: isMockEnabled } = useMock();
+  const api = createApiService(isMockEnabled);
 
   const loadingSteps = [
     { message: "Analyzing documentation...", targetProgress: 25 },
@@ -301,7 +325,7 @@ export default function Home() {
     setLoadingMessage(loadingSteps[0].message);
 
     try {
-      const response = await apiService.processDocumentation({
+      const response = await api.processDocumentation({
         url: docLink,
       });
 
@@ -355,21 +379,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Navigation Bar */}
-      <header className="border-b">
-        <nav className="max-w-6xl w-full mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Menu className="h-6 w-6" />
-              <h1 className="text-xl font-bold">AI Journey</h1>
-            </div>
-            <Avatar>
-              <AvatarImage src="https://github.com/shadcn.png" />
-              <AvatarFallback>CN</AvatarFallback>
-            </Avatar>
-          </div>
-        </nav>
-      </header>
+      <NavBar />
 
       <main className="flex-1 flex items-center justify-center p-4">
         <Card className="w-full max-w-md p-6 space-y-6">
