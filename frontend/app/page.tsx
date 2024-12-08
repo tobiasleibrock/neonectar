@@ -5,6 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   MessageCircle,
   User,
   Menu,
@@ -30,27 +37,30 @@ import Quiz from "./quiz";
 const tutorialSteps = [
   {
     step: 1,
-    title: "Introduction",
+    title: "Introduction to Gumloop",
     description:
-      "Get started with an overview of the documentation and key concepts",
+      "Learn about Gumloop's core features and how it enhances your development workflow",
     completed: false,
   },
   {
     step: 2,
-    title: "Core Concepts",
-    description: "Deep dive into the fundamental principles and architecture",
+    title: "Credits Management",
+    description:
+      "Understanding how credits work in Gumloop and managing your usage effectively",
     completed: false,
   },
   {
     step: 3,
-    title: "Interactive Learning",
-    description: "Practice with hands-on examples and real-world scenarios",
+    title: "AI Assistant Integration",
+    description:
+      "Master the AI component in Gumloop and learn how to leverage it for better productivity",
     completed: false,
   },
   {
     step: 4,
-    title: "Knowledge Check",
-    description: "Test your understanding with interactive quizzes",
+    title: "Security Best Practices",
+    description:
+      "Test your knowledge of Gumloop security practices and data handling procedures",
     completed: false,
   },
 ];
@@ -587,18 +597,27 @@ export default function Home() {
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
                 <Briefcase className="h-4 w-4" />
-                Your Position
+                Your Role
               </label>
-              <Input
-                placeholder="e.g. Developer, Product Manager, Designer"
+              <Select
                 value={position}
-                onChange={(e) => {
-                  setPosition(e.target.value);
+                onValueChange={(value) => {
+                  setPosition(value);
                   if (errors.position)
                     setErrors((prev) => ({ ...prev, position: "" }));
                 }}
-                className={errors.position ? "border-red-500" : ""}
-              />
+              >
+                <SelectTrigger
+                  className={errors.position ? "border-red-500" : ""}
+                >
+                  <SelectValue placeholder="Select your role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="developer">Developer</SelectItem>
+                  <SelectItem value="hr-recruiter">HR Recruiter</SelectItem>
+                  <SelectItem value="management">Management</SelectItem>
+                </SelectContent>
+              </Select>
               {errors.position && (
                 <p className="text-sm text-red-500">{errors.position}</p>
               )}
