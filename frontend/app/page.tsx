@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/tooltip";
 import { createApiService } from "@/services/api";
 import { Label } from "@/components/ui/label";
+import Quiz from "./quiz";
 
 const tutorialSteps = [
   {
@@ -213,170 +214,177 @@ function ChatInterface({ docUrl }: { docUrl: string }) {
       <NavBar language={language} onLanguageChange={setLanguage} />
 
       <main className="flex-1 w-full">
-        <div className="max-w-6xl w-full mx-auto px-4">
-          {/* Progress Bar and Navigation Section */}
-          <div className="py-4 w-full">
-            <div className="space-y-2 w-full">
-              <div className="flex items-center gap-4">
-                <div className="flex-1">
-                  <div className="flex justify-between items-center text-sm mb-2">
-                    <span className="font-medium">
-                      {tutorialSteps[currentStep - 1].title}
-                    </span>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <span>
-                        Step {currentStep} of {tutorialSteps.length}
+        {currentStep === tutorialSteps.length ? (
+          <Quiz />
+        ) : (
+          <div className="max-w-6xl w-full mx-auto px-4">
+            {/* Progress Bar and Navigation Section */}
+            <div className="py-4 w-full">
+              <div className="space-y-2 w-full">
+                <div className="flex items-center gap-4">
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center text-sm mb-2">
+                      <span className="font-medium">
+                        {tutorialSteps[currentStep - 1].title}
                       </span>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <span>
+                          Step {currentStep} of {tutorialSteps.length}
+                        </span>
+                      </div>
                     </div>
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip defaultOpen={false}>
+                        <TooltipTrigger asChild>
+                          <div className="w-full cursor-pointer group">
+                            <Progress
+                              value={(currentStep / tutorialSteps.length) * 100}
+                              className="w-full h-2.5 transition-all duration-200 group-hover:h-3"
+                            />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent
+                          side="bottom"
+                          align="center"
+                          className="p-4 w-[300px] bg-background border rounded-lg shadow-lg animate-in fade-in-0 zoom-in-95 duration-200"
+                        >
+                          <div className="space-y-3">
+                            {tutorialSteps.map((step, index) => (
+                              <div
+                                key={step.step}
+                                className={`flex items-center gap-2 ${
+                                  currentStep === step.step
+                                    ? "text-primary font-medium"
+                                    : step.completed
+                                    ? "text-muted-foreground"
+                                    : "text-muted-foreground/60"
+                                }`}
+                              >
+                                {step.completed ? (
+                                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                ) : (
+                                  <div
+                                    className={`h-4 w-4 rounded-full border ${
+                                      currentStep === step.step
+                                        ? "border-primary bg-primary/20"
+                                        : "border-muted-foreground/60"
+                                    }`}
+                                  />
+                                )}
+                                <span>{step.title}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
-                  <TooltipProvider delayDuration={0}>
-                    <Tooltip defaultOpen={false}>
-                      <TooltipTrigger asChild>
-                        <div className="w-full cursor-pointer group">
-                          <Progress
-                            value={(currentStep / tutorialSteps.length) * 100}
-                            className="w-full h-2.5 transition-all duration-200 group-hover:h-3"
-                          />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent
-                        side="bottom"
-                        align="center"
-                        className="p-4 w-[300px] bg-background border rounded-lg shadow-lg animate-in fade-in-0 zoom-in-95 duration-200"
-                      >
-                        <div className="space-y-3">
-                          {tutorialSteps.map((step, index) => (
-                            <div
-                              key={step.step}
-                              className={`flex items-center gap-2 ${
-                                currentStep === step.step
-                                  ? "text-primary font-medium"
-                                  : step.completed
-                                  ? "text-muted-foreground"
-                                  : "text-muted-foreground/60"
-                              }`}
-                            >
-                              {step.completed ? (
-                                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                              ) : (
-                                <div
-                                  className={`h-4 w-4 rounded-full border ${
-                                    currentStep === step.step
-                                      ? "border-primary bg-primary/20"
-                                      : "border-muted-foreground/60"
-                                  }`}
-                                />
-                              )}
-                              <span>{step.title}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={handlePreviousStep}
-                    disabled={currentStep === 1}
-                    variant="outline"
-                    size="sm"
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    onClick={handleNextStep}
-                    disabled={currentStep === tutorialSteps.length}
-                    size="sm"
-                  >
-                    Next
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={handlePreviousStep}
+                      disabled={currentStep === 1}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      onClick={handleNextStep}
+                      disabled={currentStep === tutorialSteps.length}
+                      size="sm"
+                    >
+                      Next
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Main Content */}
-          <div className="grid grid-cols-2 gap-4 w-full h-[calc(100vh-16rem)]">
-            {/* Left Side - Chat */}
-            <div className="w-full h-full">
-              <Card className="p-4 flex flex-col h-full">
-                <div className="flex-1 overflow-y-auto space-y-4">
-                  <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <MessageCircle className="h-5 w-5" />
-                    Chat Transcript
-                  </h2>
-                  <div className="space-y-4">
-                    {messages.map((message, index) => (
-                      <div
-                        key={index}
-                        className={`flex ${
-                          message.role === "user"
-                            ? "justify-end"
-                            : "justify-start"
-                        }`}
-                      >
+            {/* Main Content */}
+            <div className="grid grid-cols-2 gap-4 w-full h-[calc(100vh-16rem)]">
+              {/* Left Side - Chat */}
+              <div className="w-full h-full">
+                <Card className="p-4 flex flex-col h-full">
+                  <div className="flex-1 overflow-y-auto space-y-4">
+                    <h2 className="text-lg font-semibold flex items-center gap-2">
+                      <MessageCircle className="h-5 w-5" />
+                      Chat Transcript
+                    </h2>
+                    <div className="space-y-4">
+                      {messages.map((message, index) => (
                         <div
-                          className={`max-w-[80%] rounded-lg p-3 ${
+                          key={index}
+                          className={`flex ${
                             message.role === "user"
-                              ? "bg-primary text-primary-foreground ml-auto"
-                              : "bg-muted"
+                              ? "justify-end"
+                              : "justify-start"
                           }`}
                         >
-                          <p className="text-sm">{message.content}</p>
+                          <div
+                            className={`max-w-[80%] rounded-lg p-3 ${
+                              message.role === "user"
+                                ? "bg-primary text-primary-foreground ml-auto"
+                                : "bg-muted"
+                            }`}
+                          >
+                            <p className="text-sm">{message.content}</p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-                <form onSubmit={handleSendMessage} className="flex gap-2 mt-4">
-                  <Input
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    placeholder="Type your message..."
-                    className="flex-1"
+                  <form
+                    onSubmit={handleSendMessage}
+                    className="flex gap-2 mt-4"
+                  >
+                    <Input
+                      value={inputMessage}
+                      onChange={(e) => setInputMessage(e.target.value)}
+                      placeholder="Type your message..."
+                      className="flex-1"
+                    />
+                    <Button type="submit" size="icon">
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </form>
+                </Card>
+              </div>
+
+              {/* Right Side - Video and Avatar */}
+              <div className="space-y-4 w-full h-full flex flex-col">
+                {/* Video Section */}
+                <Card className="flex-1 bg-muted w-full overflow-hidden">
+                  <video
+                    ref={demoVideoRef}
+                    className="w-full h-full object-cover"
+                    src={`/demo-gumloop-${currentStep}.mp4`}
+                    onEnded={handleVideoEnd}
+                    autoPlay
                   />
-                  <Button type="submit" size="icon">
-                    <Send className="h-4 w-4" />
+                </Card>
+
+                {/* Avatar Section */}
+                <Card className="flex-1 relative w-full overflow-hidden">
+                  <video
+                    ref={avatarVideoRef}
+                    className="w-full h-full object-cover"
+                    src={`/${language}-avatar-gumloop-${currentStep}.mp4`}
+                    onEnded={handleVideoEnd}
+                    autoPlay
+                  />
+                  <Button
+                    onClick={handlePauseResume}
+                    variant="outline"
+                    size="sm"
+                    className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/80 hover:bg-white"
+                  >
+                    {isPaused ? "Resume" : "Pause"}
                   </Button>
-                </form>
-              </Card>
-            </div>
-
-            {/* Right Side - Video and Avatar */}
-            <div className="space-y-4 w-full h-full flex flex-col">
-              {/* Video Section */}
-              <Card className="flex-1 bg-muted w-full overflow-hidden">
-                <video
-                  ref={demoVideoRef}
-                  className="w-full h-full object-cover"
-                  src={`/demo-gumloop-${currentStep}.mp4`}
-                  onEnded={handleVideoEnd}
-                  autoPlay
-                />
-              </Card>
-
-              {/* Avatar Section */}
-              <Card className="flex-1 relative w-full overflow-hidden">
-                <video
-                  ref={avatarVideoRef}
-                  className="w-full h-full object-cover"
-                  src={`/${language}-avatar-gumloop-${currentStep}.mp4`}
-                  onEnded={handleVideoEnd}
-                  autoPlay
-                />
-                <Button
-                  onClick={handlePauseResume}
-                  variant="outline"
-                  size="sm"
-                  className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/80 hover:bg-white"
-                >
-                  {isPaused ? "Resume" : "Pause"}
-                </Button>
-              </Card>
+                </Card>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </main>
     </div>
   );
