@@ -464,35 +464,68 @@ export default function Home() {
   const [showChat, setShowChat] = useState(false);
   const [showOverview, setShowOverview] = useState(false);
   const [errors, setErrors] = useState({ docLink: "", position: "" });
-  const [loadingMessage, setLoadingMessage] = useState("");
   const [progress, setProgress] = useState(0);
   const router = useRouter();
   const [docUrl, setDocUrl] = useState("");
   const api = createApiService(false);
 
-  const loadingSteps = [
-    { message: "Analyzing documentation...", targetProgress: 25 },
-    { message: "Creating personalized tutorial...", targetProgress: 50 },
-    { message: "Generating video content...", targetProgress: 75 },
-    { message: "Finalizing your experience...", targetProgress: 100 },
-  ];
+  const simulateProgress = (onComplete: () => void) => {
+    const startTime = Date.now();
+    const totalDuration = 10000; // 10 seconds
+    const pausePoints = [
+      { time: 1000, duration: 500 }, // 1 second pause for 500ms
+      { time: 3000, duration: 500 }, // 3 seconds pause for 500ms
+      { time: 10000, duration: 500 }, // 10 seconds pause for 500ms
+    ];
 
-  const validateInputs = () => {
-    const newErrors = { docLink: "", position: "" };
-    let isValid = true;
+    let isPaused = false;
+    let pauseStartTime = 0;
+    let currentPauseIndex = 0;
 
-    if (!docLink.trim()) {
-      newErrors.docLink = "Please provide a documentation link";
-      isValid = false;
-    }
+    const animate = () => {
+      const currentTime = Date.now() - startTime;
+      const pausePoint = pausePoints[currentPauseIndex];
 
-    if (!position.trim()) {
-      newErrors.position = "Please specify your position";
-      isValid = false;
-    }
+      // Check if we need to start a pause
+      if (pausePoint && !isPaused && currentTime >= pausePoint.time) {
+        isPaused = true;
+        pauseStartTime = Date.now();
+        currentPauseIndex++;
+      }
 
-    setErrors(newErrors);
-    return isValid;
+      // Check if we need to end a pause
+      if (isPaused) {
+        const pauseElapsed = Date.now() - pauseStartTime;
+        if (pauseElapsed >= pausePoints[currentPauseIndex - 1].duration) {
+          isPaused = false;
+        }
+      }
+
+      if (!isPaused) {
+        const adjustedTime =
+          currentTime -
+          (currentPauseIndex > 0
+            ? pausePoints
+                .slice(0, currentPauseIndex)
+                .reduce((acc, point) => acc + point.duration, 0)
+            : 0);
+        const currentProgress = Math.min(
+          (adjustedTime / totalDuration) * 100,
+          100
+        );
+        setProgress(Math.round(currentProgress));
+
+        if (currentProgress < 100) {
+          requestAnimationFrame(animate);
+        } else {
+          onComplete();
+        }
+      } else {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    requestAnimationFrame(animate);
   };
 
   const handleGenerate = async () => {
@@ -500,7 +533,6 @@ export default function Home() {
 
     setIsLoading(true);
     setProgress(0);
-    setLoadingMessage(loadingSteps[0].message);
 
     try {
       const response = await api.processDocumentation({
@@ -524,31 +556,22 @@ export default function Home() {
     }
   };
 
-  const simulateProgress = (onComplete: () => void) => {
-    const startTime = Date.now();
-    const totalDuration = 5000;
-    const stepDuration = totalDuration / loadingSteps.length;
+  const validateInputs = () => {
+    const newErrors = { docLink: "", position: "" };
+    let isValid = true;
 
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const currentProgress = Math.min((elapsed / totalDuration) * 100, 100);
+    if (!docLink.trim()) {
+      newErrors.docLink = "Please provide a documentation link";
+      isValid = false;
+    }
 
-      setProgress(Math.round(currentProgress));
+    if (!position.trim()) {
+      newErrors.position = "Please specify your position";
+      isValid = false;
+    }
 
-      const currentStep = Math.min(
-        Math.floor(elapsed / stepDuration),
-        loadingSteps.length - 1
-      );
-      setLoadingMessage(loadingSteps[currentStep].message);
-
-      if (currentProgress < 100) {
-        requestAnimationFrame(animate);
-      } else {
-        onComplete();
-      }
-    };
-
-    requestAnimationFrame(animate);
+    setErrors(newErrors);
+    return isValid;
   };
 
   if (showChat) {
@@ -629,15 +652,12 @@ export default function Home() {
                 onClick={handleGenerate}
                 disabled={isLoading}
               >
-                {isLoading ? loadingMessage : "Create Tutorial"}
+                {isLoading ? "Processing..." : "Create Tutorial"}
               </Button>
 
               {isLoading && (
-                <div className="space-y-2">
+                <div>
                   <Progress value={progress} className="w-full h-2" />
-                  <p className="text-sm text-center text-muted-foreground">
-                    {progress}% Complete
-                  </p>
                 </div>
               )}
             </div>
