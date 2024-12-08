@@ -12,9 +12,10 @@ import {
   Link,
   Briefcase,
   CheckCircle2,
+  ArrowRight,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Tooltip,
@@ -23,9 +24,84 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { createApiService } from "@/services/api";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { useMock } from "@/context/mock-context";
+
+const tutorialSteps = [
+  {
+    step: 1,
+    title: "Introduction",
+    description:
+      "Get started with an overview of the documentation and key concepts",
+    completed: false,
+  },
+  {
+    step: 2,
+    title: "Core Concepts",
+    description: "Deep dive into the fundamental principles and architecture",
+    completed: false,
+  },
+  {
+    step: 3,
+    title: "Interactive Learning",
+    description: "Practice with hands-on examples and real-world scenarios",
+    completed: false,
+  },
+  {
+    step: 4,
+    title: "Knowledge Check",
+    description: "Test your understanding with interactive quizzes",
+    completed: false,
+  },
+];
+
+// Overview component that shows the steps
+function Overview({ onStart }: { onStart: () => void }) {
+  return (
+    <div className="min-h-screen flex flex-col">
+      <NavBar language="en" onLanguageChange={() => {}} />
+
+      <main className="flex-1 flex items-center justify-center p-8">
+        <div className="max-w-4xl w-full space-y-8">
+          <div className="text-center space-y-4">
+            <h1 className="text-4xl font-bold">Your Learning Journey</h1>
+            <p className="text-lg text-gray-600">
+              Follow these steps to master your documentation
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+            {tutorialSteps.map((step) => (
+              <Card
+                key={step.step}
+                className="p-6 hover:shadow-lg transition-shadow"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="min-w-[2rem] h-8 aspect-square rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-semibold border border-gray-200">
+                    {step.step}
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-semibold">{step.title}</h3>
+                    <p className="text-gray-600">{step.description}</p>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          <div className="flex justify-center mt-8">
+            <Button
+              onClick={onStart}
+              className="px-8 py-6 text-lg group bg-black hover:bg-gray-900"
+            >
+              Start Learning
+              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+            </Button>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
 
 // Separate component for the chat interface
 function ChatInterface({ docUrl }: { docUrl: string }) {
@@ -35,22 +111,29 @@ function ChatInterface({ docUrl }: { docUrl: string }) {
     {
       role: "ai",
       content:
-        "Welcome to the AI documentation journey! Let me guide you through the basics...",
+        "Welcome to NeoNectar! I'm here to guide you through your documentation journey...",
     },
   ]);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState(2);
-  const { useMock: isMockEnabled } = useMock();
-  const api = createApiService(isMockEnabled);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [language, setLanguage] = useState<"en" | "ger">("en");
+  const [isPaused, setIsPaused] = useState(false);
+  const demoVideoRef = useRef<HTMLVideoElement>(null);
+  const avatarVideoRef = useRef<HTMLVideoElement>(null);
+  const api = createApiService(false);
 
-  const tutorialSteps = [
-    { step: 1, title: "Introduction to AI", completed: true },
-    { step: 2, title: "Understanding Core Concepts", completed: false },
-    { step: 3, title: "Practical Applications", completed: false },
-    { step: 4, title: "Advanced Topics", completed: false },
-    { step: 5, title: "Final Review", completed: false },
-  ];
+  const handleNextStep = () => {
+    if (currentStep < tutorialSteps.length) {
+      setCurrentStep((prev) => prev + 1);
+    }
+  };
+
+  const handlePreviousStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep((prev) => prev - 1);
+    }
+  };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,9 +168,49 @@ function ChatInterface({ docUrl }: { docUrl: string }) {
     }
   };
 
+  // Handle pause/resume
+  const handlePauseResume = () => {
+    if (!demoVideoRef.current || !avatarVideoRef.current) return;
+
+    if (isPaused) {
+      Promise.all([
+        demoVideoRef.current.play(),
+        avatarVideoRef.current.play(),
+      ]).catch((error) => console.error("Error playing videos:", error));
+    } else {
+      demoVideoRef.current.pause();
+      avatarVideoRef.current.pause();
+    }
+    setIsPaused(!isPaused);
+  };
+
+  // Start playing videos when step changes
+  useEffect(() => {
+    if (demoVideoRef.current && avatarVideoRef.current) {
+      demoVideoRef.current.currentTime = 0;
+      avatarVideoRef.current.currentTime = 0;
+      Promise.all([
+        demoVideoRef.current.play(),
+        avatarVideoRef.current.play(),
+      ]).catch((error) => console.error("Error playing videos:", error));
+      setIsPaused(false);
+    }
+  }, [currentStep, language]);
+
+  // Handle video ending
+  const handleVideoEnd = () => {
+    if (demoVideoRef.current) demoVideoRef.current.currentTime = 0;
+    if (avatarVideoRef.current) avatarVideoRef.current.currentTime = 0;
+    Promise.all([
+      demoVideoRef.current?.play(),
+      avatarVideoRef.current?.play(),
+    ]).catch((error) => console.error("Error replaying videos:", error));
+    setIsPaused(false);
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
-      <NavBar />
+      <NavBar language={language} onLanguageChange={setLanguage} />
 
       <main className="flex-1 w-full">
         <div className="max-w-6xl w-full mx-auto px-4">
@@ -95,27 +218,13 @@ function ChatInterface({ docUrl }: { docUrl: string }) {
           <div className="py-4 w-full">
             <div className="space-y-2 w-full">
               <div className="flex justify-between items-center text-sm">
-                <span className="font-medium">Introduction to AI</span>
+                <span className="font-medium">
+                  {tutorialSteps[currentStep - 1].title}
+                </span>
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <span>
                     Step {currentStep} of {tutorialSteps.length}
                   </span>
-                  <div className="flex items-center text-xs text-muted-foreground/80">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="w-4 h-4"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <path d="M12 16v-4" />
-                      <path d="M12 8h.01" />
-                    </svg>
-                  </div>
                 </div>
               </div>
               <TooltipProvider delayDuration={0}>
@@ -123,7 +232,7 @@ function ChatInterface({ docUrl }: { docUrl: string }) {
                   <TooltipTrigger asChild>
                     <div className="w-full cursor-pointer group">
                       <Progress
-                        value={40}
+                        value={(currentStep / tutorialSteps.length) * 100}
                         className="w-full h-2.5 transition-all duration-200 group-hover:h-3"
                       />
                     </div>
@@ -164,6 +273,23 @@ function ChatInterface({ docUrl }: { docUrl: string }) {
                 </Tooltip>
               </TooltipProvider>
             </div>
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between mb-4">
+            <Button
+              onClick={handlePreviousStep}
+              disabled={currentStep === 1}
+              variant="outline"
+            >
+              Previous
+            </Button>
+            <Button
+              onClick={handleNextStep}
+              disabled={currentStep === tutorialSteps.length}
+            >
+              Next
+            </Button>
           </div>
 
           {/* Main Content */}
@@ -216,22 +342,35 @@ function ChatInterface({ docUrl }: { docUrl: string }) {
             {/* Right Side - Video and Avatar */}
             <div className="space-y-4 w-full">
               {/* Video Section */}
-              <Card className="aspect-video bg-muted flex items-center justify-center w-full">
-                <p className="text-muted-foreground">Demo Video</p>
+              <Card className="aspect-video bg-muted w-full overflow-hidden">
+                <video
+                  ref={demoVideoRef}
+                  className="w-full h-full object-cover"
+                  src={`/demo-gumloop-${currentStep}.mp4`}
+                  onEnded={handleVideoEnd}
+                  autoPlay
+                />
               </Card>
 
               {/* Avatar Section */}
-              <Card className="p-4 h-[calc(50vh-8rem)] w-full">
-                <div className="h-full flex flex-col items-center justify-center">
-                  <Avatar className="h-32 w-32">
-                    <AvatarImage src="https://github.com/shadcn.png" />
-                    <AvatarFallback>AI</AvatarFallback>
-                  </Avatar>
-                  <p className="mt-4 text-center text-muted-foreground">
-                    AI Assistant Speaking...
-                  </p>
+              <Card className="p-4 h-[calc(50vh-8rem)] w-full overflow-hidden">
+                <div className="h-full">
+                  <video
+                    ref={avatarVideoRef}
+                    className="w-full h-full object-cover"
+                    src={`/${language}-avatar-gumloop-${currentStep}.mp4`}
+                    onEnded={handleVideoEnd}
+                    autoPlay
+                  />
                 </div>
               </Card>
+
+              {/* Pause Button */}
+              <div className="flex justify-center">
+                <Button onClick={handlePauseResume} variant="outline" size="sm">
+                  {isPaused ? "Resume" : "Pause"}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -240,25 +379,41 @@ function ChatInterface({ docUrl }: { docUrl: string }) {
   );
 }
 
-function NavBar() {
-  const { useMock: isMockEnabled, toggleMock } = useMock();
-
+function NavBar({
+  language,
+  onLanguageChange,
+}: {
+  language: "en" | "ger";
+  onLanguageChange: (lang: "en" | "ger") => void;
+}) {
   return (
     <header className="border-b">
       <nav className="max-w-6xl w-full mx-auto px-4 py-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
             <Menu className="h-6 w-6" />
-            <h1 className="text-xl font-bold">AI Journey</h1>
+            <h1 className="text-xl font-bold">neonectar</h1>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Switch
-                id="mock-mode"
-                checked={isMockEnabled}
-                onCheckedChange={toggleMock}
-              />
-              <Label htmlFor="mock-mode">Mock Mode</Label>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={language === "en" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => onLanguageChange("en")}
+                  className="bg-black hover:bg-gray-900 text-white"
+                >
+                  EN
+                </Button>
+                <Button
+                  variant={language === "ger" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => onLanguageChange("ger")}
+                  className="border-gray-200 hover:bg-gray-100"
+                >
+                  DE
+                </Button>
+              </div>
             </div>
             <Avatar>
               <AvatarImage src="https://github.com/shadcn.png" />
@@ -276,27 +431,19 @@ export default function Home() {
   const [docLink, setDocLink] = useState("");
   const [position, setPosition] = useState("");
   const [showChat, setShowChat] = useState(false);
+  const [showOverview, setShowOverview] = useState(false);
   const [errors, setErrors] = useState({ docLink: "", position: "" });
   const [loadingMessage, setLoadingMessage] = useState("");
   const [progress, setProgress] = useState(0);
   const router = useRouter();
   const [docUrl, setDocUrl] = useState("");
-  const { useMock: isMockEnabled } = useMock();
-  const api = createApiService(isMockEnabled);
+  const api = createApiService(false);
 
   const loadingSteps = [
     { message: "Analyzing documentation...", targetProgress: 25 },
     { message: "Creating personalized tutorial...", targetProgress: 50 },
     { message: "Generating video content...", targetProgress: 75 },
     { message: "Finalizing your experience...", targetProgress: 100 },
-  ];
-
-  const tutorialSteps = [
-    { step: 1, title: "Introduction to AI", completed: true },
-    { step: 2, title: "Understanding Core Concepts", completed: false },
-    { step: 3, title: "Practical Applications", completed: false },
-    { step: 4, title: "Advanced Topics", completed: false },
-    { step: 5, title: "Final Review", completed: false },
   ];
 
   const validateInputs = () => {
@@ -333,7 +480,7 @@ export default function Home() {
         setDocUrl(docLink);
         simulateProgress(() => {
           setIsLoading(false);
-          setShowChat(true);
+          setShowOverview(true);
         });
       }
     } catch (error) {
@@ -377,15 +524,23 @@ export default function Home() {
     return <ChatInterface docUrl={docUrl} />;
   }
 
+  if (showOverview) {
+    return <Overview onStart={() => setShowChat(true)} />;
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
-      <NavBar />
+      <NavBar language="en" onLanguageChange={() => {}} />
 
       <main className="flex-1 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md p-6 space-y-6">
+        <Card className="w-full max-w-md p-6 space-y-6 bg-gradient-to-b from-white to-gray-50">
           <h2 className="text-2xl font-bold text-center">
-            Start Your AI Journey
+            welcome to neonectar
           </h2>
+
+          <p className="text-center text-gray-600">
+            Transform your documentation into an interactive learning experience
+          </p>
 
           <div className="space-y-4">
             <div className="space-y-2">
@@ -430,7 +585,7 @@ export default function Home() {
 
             <div className="space-y-3">
               <Button
-                className="w-full transform transition-transform duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-lg"
+                className="w-full transform transition-transform duration-200 ease-in-out hover:-translate-y-0.5 hover:shadow-lg bg-black hover:bg-gray-900 text-white"
                 onClick={handleGenerate}
                 disabled={isLoading}
               >
